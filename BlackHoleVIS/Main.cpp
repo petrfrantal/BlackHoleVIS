@@ -1,4 +1,5 @@
 #include <SDL.h>
+#include "Slider.h"
 #undef main
 #include <glm\glm.hpp>
 #include <glm/gtx/vector_angle.hpp>
@@ -12,6 +13,7 @@
 #include "Mesh.h"
 #include <math.h>
 #include "Visualization.h"
+
 
 // returns angle in radians, vertical angle, has to be in the same plane
 float angleBetweenVectorsVertical(glm::vec3 first, glm::vec3 second) {
@@ -98,16 +100,23 @@ int main(int argc, char * argv[]) {
 	ArrowShader arrowShader("./Shaders/ArrowShader");
 	LineShader lineShader("./Shaders/LineShader");
 
-	Visualization vis(&arrowShader);
+	Visualization vis(&arrowShader, &lineShader);
 	vis.loadArray("data/el2_32_32_32b.csv");
 
 	// Mesh definitions
 	ArrowMesh arrowMesh(&arrowShader);
+	LineMesh lineMesh(&lineShader);
+
+	// create a frame slider
+	Slider slider0;
+	Slider slider1;
 
 	// variables related to free camera
 	bool leftMouseButtonPressed = false;		// buttons
 	bool rightMouseButtonPressed = false;
 	bool mouseWheelPressed = false;
+	bool leftMouseButtonSlider0 = false;
+	bool leftMouseButtonSlider1 = false;
 	float horizontalAngleDelta = 0.0f;			// angles to rotate the camera
 	float verticalAngleDelta = 0.0f;
 	float forwardBackwardMovementDelta = 0.0f;	// variables to move the camera
@@ -117,6 +126,10 @@ int main(int argc, char * argv[]) {
 	int mouseYPos;
 	int newMouseXPos;
 	int newMouseYPos;
+	int slider0ClickValue = -1;
+	int slider1ClickValue = -1;
+	int num0 = 12;
+	int num1 = 5;
 
 	// SDL window loop
 	SDL_Event e;
@@ -128,10 +141,36 @@ int main(int argc, char * argv[]) {
 			} else if (e.type == SDL_KEYDOWN) {
 				if (e.key.keysym.sym == SDLK_ESCAPE) {
 					appRunning = false;
+				} else if (e.key.keysym.sym == SDLK_SPACE) {
+					num0 += 3;
+					vis.setSamplingParameter(num0);
+					std::cout << "Send " << num0 << std::endl;
+				} else if (e.key.keysym.sym == SDLK_x) {
+					vis.setCuttingPlane(xPlane, (double)num1 / 50);
+				} else if (e.key.keysym.sym == SDLK_y) {
+					vis.setCuttingPlane(yPlane, (double)num1 / 50);
+				} else if (e.key.keysym.sym == SDLK_z) {
+					vis.setCuttingPlane(zPlane, (double)num1 / 50);
+				} else if (e.key.keysym.sym == SDLK_c) {
+					vis.endCuttingPlane();
+				} else if (e.key.keysym.sym == SDLK_t) {
+					vis.changeModel();
 				}
 			} else if (e.type == SDL_MOUSEBUTTONDOWN) {
 				if (e.button.button == SDL_BUTTON_LEFT) {
-					leftMouseButtonPressed = true;
+					slider0ClickValue = slider0.clickSlider(e.motion.x, e.motion.y);
+					slider1ClickValue = slider1.clickSlider(e.motion.x, e.motion.y);
+					if (slider0ClickValue >= 0) {
+						num0 = slider0ClickValue;
+						leftMouseButtonSlider0 = true;
+						std::cout << "NUM0 " << num0 + 3 << std::endl;
+					} else if (slider1ClickValue >= 0) {
+						num1 = slider1ClickValue;
+						leftMouseButtonSlider1 = true;
+						std::cout << "NUM1 " << num1 << std::endl;
+					} else {
+						leftMouseButtonPressed = true;
+					}
 				} else if (e.button.button == SDL_BUTTON_RIGHT) {
 					rightMouseButtonPressed = true;
 				} else if (e.button.button == SDL_BUTTON_MIDDLE) {
@@ -143,6 +182,8 @@ int main(int argc, char * argv[]) {
 				leftMouseButtonPressed = false;
 				rightMouseButtonPressed = false;
 				mouseWheelPressed = false;
+				leftMouseButtonSlider0 = false;
+				leftMouseButtonSlider1 = false;
 			} else if (e.type == SDL_MOUSEMOTION) {
 				if (leftMouseButtonPressed) {
 					newMouseXPos = e.motion.x;				// rotate the camera
@@ -167,6 +208,16 @@ int main(int argc, char * argv[]) {
 					camera.moveCameraRightLeftUpDown(horizontalTranslationDelta, verticalTranslationDelta);
 					mouseXPos = newMouseXPos;
 					mouseYPos = newMouseYPos;
+				} else if (leftMouseButtonSlider0) {
+					slider0ClickValue = slider0.dragSlider(e.motion.x);
+					num0 = slider0ClickValue;
+					slider0ClickValue = -1;
+					std::cout << "NUM0 " << num0 + 3 << std::endl;
+				} else if (leftMouseButtonSlider1) {
+					slider1ClickValue = slider1.dragSlider(e.motion.x);
+					num1 = slider1ClickValue;
+					slider1ClickValue = -1;
+					std::cout << "NUM1 " << num1 << std::endl;
 				}
 			}
 		}
@@ -193,24 +244,44 @@ int main(int argc, char * argv[]) {
 		modelMatrix = fullRotation * defaultRotation;
 
 		int dimension = 512;
-		int samplingX = 10;
-		int samplingY = 5;
-		int samplingZ = 5;
+		int samplingX = 2;
+		int samplingY = 1;
+		int samplingZ = 1;
 		glm::mat4 usedModelMatrix;
+
+		glm::vec3 firstPoint = glm::vec3(0.0f, 0.0f, 0.0f);
+		glm::vec3 secondPoint = glm::vec3(1.0f, 0.0f, 0.0f);
+		glm::vec4 point;
+		glm::vec3 verts[2];
+		glm::vec3 colors[2];
+
 		for (int i = 0; i < samplingX; i++) {
-			float translationX = i * 512 / (float)samplingX;
+			float translationX = i * 100 / (float)samplingX;
 			for (int j = 0; j < samplingY; j++) {
 				float translationY = j * 512 / (float)samplingY;
 				for (int k = 0; k < samplingZ; k++) {
 					float translationZ = k * 512 / (float)samplingZ;
-					translate = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0, translationZ + 50.0f));
+					translate = glm::translate(glm::mat4(1.0f), glm::vec3(translationX, 0.0f, translationZ + 50.0f));
 					scale = glm::scale(glm::mat4(1.0f), glm::vec3(0.75f));
 					usedModelMatrix = translate * modelMatrix * scale;
 					//arrowMesh.draw(&arrowShader, camera, usedModelMatrix, materialDiffuse);
+
+					modelMatrix = computeRotation(verticalAngle, horizontalAngle);
+					usedModelMatrix =  translate * modelMatrix * glm::scale(glm::mat4(1.0f), glm::vec3(30.0f));
+					point = usedModelMatrix * glm::vec4(firstPoint, 1.0f);
+					verts[0] = glm::vec3(point.x, point.y, point.z);
+					colors[0] = redMat;
+					point = usedModelMatrix * glm::vec4(secondPoint, 1.0f);
+					verts[1] = glm::vec3(point.x, point.y, point.z);
+					colors[1] = blueMat;
+					//lineMesh.loadBuffer(&verts[0], 2, &colors[0], &lineShader, staticDraw);
+					//lineMesh.draw(&lineShader, camera);
 				}
 			}
 		}
 		vis.draw(camera);
+		slider0.drawSlider(windowWidth, windowHeight, num0, 48, 0);
+		slider1.drawSlider(windowWidth, windowHeight, num1, 51, 1);
 		window.swapBuffers();
 	}
 

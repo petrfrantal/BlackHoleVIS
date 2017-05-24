@@ -9,4 +9,6 @@ private:
 public:
 	LineShader(const std::string& fileName);
 	~LineShader();
+	GLint getColorLoc(void);
+	GLint getVPLoc(void);
 };
