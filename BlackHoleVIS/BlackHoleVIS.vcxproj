@@ -166,6 +166,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ArrowModel.h" />
+    <ClInclude Include="ArrowModel2.h" />
     <ClInclude Include="ArrowShader.h" />
     <ClInclude Include="Camera.h" />
     <ClInclude Include="LineShader.h" />
