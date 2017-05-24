@@ -6,6 +6,7 @@ Visualization::Visualization(ArrowShader * arrShader, LineShader * lShader) {
 	arrowShader = arrShader;
 	lineMesh = new LineMesh(lShader);
 	lineShader = lShader;
+	borderMesh = new LineMesh(lShader);
 	type = 0;
 	cuttingPlane = false;
 	// the arrays will always be of the maximum size, but we will use just samplingParameter^3 of them (reallocating would be expensive)
@@ -22,6 +23,7 @@ Visualization::Visualization(ArrowShader * arrShader, LineShader * lShader) {
 			norms[i][j] = new float[maximumSamplingParameter];
 		}
 	}
+	loadBorders();
 }
 
 Visualization::~Visualization(void) {
@@ -48,6 +50,9 @@ Visualization::~Visualization(void) {
 		delete[] data[i];
 	}
 	delete[] data;
+	delete arrowMesh;
+	delete lineMesh;
+	delete borderMesh;
 }
 
 void Visualization::loadArray(const std::string & fileName) {
@@ -89,6 +94,8 @@ void Visualization::setSamplingParameter(int samplingRate) {
 	endCuttingPlane();
 	samplingParameter = samplingRate;
 	interpolateData();
+	std::cout << "Cutting plane disabled" << std::endl;
+	std::cout << "Sampling parameter set to " << samplingParameter << std::endl;
 }
 
 void Visualization::interpolateData(void) {
@@ -106,6 +113,8 @@ void Visualization::interpolateData(void) {
 	glm::mat4 correctionTranslation;
 	glm::mat4 modelMatrix;
 	glm::vec3 material;
+	glm::vec3 secondLineMaterial;
+	glm::vec3 secondMaterialCorrection = glm::vec3(0.4f);
 	glm::vec3 directionNormalized;
 	float translationX, translationY, translationZ;
 	float translationIncrement = imageGridDimension / samplingParameter;
@@ -187,6 +196,11 @@ void Visualization::interpolateData(void) {
 		}
 		translationZ += translationIncrement;
 	}
+	float correctionAngle = glm::radians(90.0f);
+	glm::mat4 correctionRotation = glm::mat4(cos(correctionAngle), sin(correctionAngle), 0.0f, 0.0f,
+		-sin(correctionAngle), cos(correctionAngle), 0.0f, 0.0f,
+		0.0f, 0.0f, 1.0f, 0.0f,
+		0.0f, 0.0f, 0.0f, 1.0f);
 	glm::vec4 firstPoint = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
 	glm::vec4 secondPoint = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f);
 	glm::vec4 point;
@@ -203,20 +217,21 @@ void Visualization::interpolateData(void) {
 				norm = norms[i][j][k] / maximalNorm;		// normalized norm - parameter for interpolation of the material
 				material = (1 - norm) * firstMaterial + norm * secondMaterial;
 				materials[i][j][k] = material;
-				point = modelMatrices[i][j][k] * lineScale * firstPoint;
+				secondLineMaterial = material + secondMaterialCorrection;
+				point = modelMatrices[i][j][k] * correctionRotation * lineScale * firstPoint;
+				positions[positionIndex++] = point.x;
+				positions[positionIndex++] = point.y;
+				positions[positionIndex++] = point.z;
+				colors[colorIndex++] = secondLineMaterial.x;
+				colors[colorIndex++] = secondLineMaterial.y;
+				colors[colorIndex++] = secondLineMaterial.z;
+				point = modelMatrices[i][j][k] * correctionRotation * lineScale * secondPoint;
 				positions[positionIndex++] = point.x;
 				positions[positionIndex++] = point.y;
 				positions[positionIndex++] = point.z;
 				colors[colorIndex++] = material.x;
 				colors[colorIndex++] = material.y;
 				colors[colorIndex++] = material.z;
-				point = modelMatrices[i][j][k] * lineScale * secondPoint;
-				positions[positionIndex++] = point.x;
-				positions[positionIndex++] = point.y;
-				positions[positionIndex++] = point.z;
-				colors[colorIndex++] = white.x;
-				colors[colorIndex++] = white.y;
-				colors[colorIndex++] = white.z;
 			}
 		}
 	}
@@ -226,6 +241,11 @@ void Visualization::interpolateData(void) {
 }
 
 void Visualization::loadLinesCutPlane(void) {
+	float correctionAngle = glm::radians(90.0f);
+	glm::mat4 correctionRotation = glm::mat4(cos(correctionAngle), sin(correctionAngle), 0.0f, 0.0f,
+		-sin(correctionAngle), cos(correctionAngle), 0.0f, 0.0f,
+		0.0f, 0.0f, 1.0f, 0.0f,
+		0.0f, 0.0f, 0.0f, 1.0f);
 	glm::vec4 firstPoint = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
 	glm::vec4 secondPoint = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f);
 	glm::vec4 point;
@@ -235,6 +255,8 @@ void Visualization::loadLinesCutPlane(void) {
 	int positionIndex = 0;
 	int colorIndex = 0;
 	glm::vec3 white = glm::vec3(1.0f);
+	glm::vec3 secondMaterial;
+	glm::vec3 secondMaterialCorrection = glm::vec3(0.4f);
 	glm::mat4 lineScale = glm::scale(glm::mat4(1.0f), glm::vec3(30.0f));
 	glm::mat4 modelMatrix;
 	glm::vec3 material;
@@ -250,20 +272,21 @@ void Visualization::loadLinesCutPlane(void) {
 				modelMatrix = modelMatrices[planePosition][i][j];
 				material = materials[planePosition][i][j];
 			}
-			point = modelMatrix * lineScale * firstPoint;
+			secondMaterial = material + secondMaterialCorrection;
+			point = modelMatrix * correctionRotation * lineScale * firstPoint;
+			positions[positionIndex++] = point.x;
+			positions[positionIndex++] = point.y;
+			positions[positionIndex++] = point.z;
+			colors[colorIndex++] = secondMaterial.x;
+			colors[colorIndex++] = secondMaterial.y;
+			colors[colorIndex++] = secondMaterial.z;
+			point = modelMatrix * correctionRotation * lineScale * secondPoint;
 			positions[positionIndex++] = point.x;
 			positions[positionIndex++] = point.y;
 			positions[positionIndex++] = point.z;
 			colors[colorIndex++] = material.x;
 			colors[colorIndex++] = material.y;
 			colors[colorIndex++] = material.z;
-			point = modelMatrix * lineScale * secondPoint;
-			positions[positionIndex++] = point.x;
-			positions[positionIndex++] = point.y;
-			positions[positionIndex++] = point.z;
-			colors[colorIndex++] = white.x;
-			colors[colorIndex++] = white.y;
-			colors[colorIndex++] = white.z;
 		}
 	}
 
@@ -282,6 +305,7 @@ void Visualization::draw(Camera & camera) {
 	} else if (type == 1) {
 		drawLines(camera);
 	}
+	drawBorders(camera);
 }
 
 void Visualization::drawArrows(Camera & camera) {
@@ -319,6 +343,7 @@ void Visualization::drawArrowsCuttingPlane(Camera & camera) {
 }
 
 void Visualization::drawLines(Camera & camera) {
+	glLineWidth(3.0f);
 	lineMesh->draw(lineShader, camera);
 }
 
@@ -327,6 +352,14 @@ void Visualization::setCuttingPlane(Planes pl, double position) {
 	plane = pl;
 	planePosition = position * samplingParameter;
 	loadLinesCutPlane();
+	if (plane == xPlane) {
+		std::cout << "Cutting plane set to X plane" << std::endl;
+	} else if (plane == yPlane) {
+		std::cout << "Cutting plane set to Y plane" << std::endl;
+	} else {
+		std::cout << "Cutting plane set to Z plane" << std::endl;
+	}
+	std::cout << "Cutting plane position is " << planePosition << " out of " << samplingParameter << std::endl;
 }
 
 void Visualization::endCuttingPlane() {
@@ -339,4 +372,69 @@ void Visualization::changeModel(void) {
 	} else {
 		type = 0;
 	}
+}
+
+void Visualization::loadBorders() {
+	int vertexCount = 72;
+	float * vertices = new float[vertexCount];
+	float * colors = new float[vertexCount];
+	float borderDimension = imageGridDimension + 70.0f;
+	float xTranslation, yTranslation, zTranslation;
+	int verticesIndex = 0;
+	int colorsIndex = 0;
+	float offset = 49.0f;
+	float additionalTranslationZ = 50.0f;
+	for (int i = 0; i < 2; i++) {
+		xTranslation = i * borderDimension;
+		for (int j = 0; j < 2; j++) {
+			yTranslation = j * borderDimension;
+			for (int k = 0; k < 2; k++) {
+				zTranslation = k * borderDimension;
+				vertices[verticesIndex++] = xTranslation - offset;
+				vertices[verticesIndex++] = yTranslation - offset;
+				vertices[verticesIndex++] = zTranslation - offset + additionalTranslationZ;
+				colors[colorsIndex++] = 0.7f;
+				colors[colorsIndex++] = 0.7f;
+				colors[colorsIndex++] = 0.7f;
+			}
+		}
+	}
+	for (int i = 0; i < 2; i++) {
+		xTranslation = i * borderDimension;
+		for (int j = 0; j < 2; j++) {
+			zTranslation = j * borderDimension;
+			for (int k = 0; k < 2; k++) {
+				yTranslation = k * borderDimension;
+				vertices[verticesIndex++] = xTranslation - offset;
+				vertices[verticesIndex++] = yTranslation - offset;
+				vertices[verticesIndex++] = zTranslation - offset + additionalTranslationZ;
+				colors[colorsIndex++] = 0.7f;
+				colors[colorsIndex++] = 0.7f;
+				colors[colorsIndex++] = 0.7f;
+			}
+		}
+	}
+	for (int i = 0; i < 2; i++) {
+		yTranslation = i * borderDimension;
+		for (int j = 0; j < 2; j++) {
+			zTranslation = j * borderDimension;
+			for (int k = 0; k < 2; k++) {
+				xTranslation = k * borderDimension;
+				vertices[verticesIndex++] = xTranslation - offset;
+				vertices[verticesIndex++] = yTranslation - offset;
+				vertices[verticesIndex++] = zTranslation - offset + additionalTranslationZ;
+				colors[colorsIndex++] = 0.7f;
+				colors[colorsIndex++] = 0.7f;
+				colors[colorsIndex++] = 0.7f;
+			}
+		}
+	}
+	borderMesh->loadBuffer(vertices, colors, vertexCount, lineShader, staticDraw);
+	delete[] vertices;
+	delete[] colors;
+}
+
+void Visualization::drawBorders(Camera & camera) {
+	glLineWidth(1.0f);
+	borderMesh->draw(lineShader, camera);
 }

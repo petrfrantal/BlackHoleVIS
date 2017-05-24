@@ -24,7 +24,4 @@ out vec3 color_v;
 void main() {
 	gl_Position = viewProjectionMatrix * vec4(position.x, position.y, position.z, 1.0f);
 	color_v = color;
-	/*if (position.x == 10.0f && position.y == 10.0f && position.z == 10.0f) {
-		color_v = vec3(0.0f, 0.0f, 1.0f);
-	}*/
 }
