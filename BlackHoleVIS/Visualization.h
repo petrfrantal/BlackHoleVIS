@@ -5,6 +5,12 @@
 #include "ArrowShader.h"
 #include "VisMath.h"
 
+enum Planes {
+	xPlane,
+	yPlane,
+	zPlane
+};
+
 class Visualization {
 private:
 	float **** data;
@@ -13,11 +19,14 @@ private:
 	ArrowShader * arrowShader;
 	int type;						// Arrows, lines
 	bool cuttingPlane;				// Cutting plane used?
+	int planePosition = 5;				
+	Planes plane;
 	int samplingParameter;			// how many samples in 
 	const int maximumSamplingParameter = 50;
 	const float imageGridDimension = 500.0f;
 	glm::mat4 *** modelMatrices;		// rotation matrix of every arrow
 	glm::vec3 *** materials;			// materials of every arrow
+	float *** norms;					// magnitudes of vectors, used for computing the material
 	// private methods
 	void interpolateData(void);
 	void drawArrows(Camera & camera);

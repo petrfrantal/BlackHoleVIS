@@ -7,20 +7,20 @@ ArrowMesh::ArrowMesh(ArrowShader * shader) {
 	// vertices - VBO
 	glGenBuffers(1, &vbo);
 	glBindBuffer(GL_ARRAY_BUFFER, vbo);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(arrowVertices), arrowVertices, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(arrow2Vertices), arrow2Vertices, GL_STATIC_DRAW);
 
 	// indices - EBO
 	glGenBuffers(1, &ebo);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(arrowTriangles), arrowTriangles, GL_STATIC_DRAW);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(arrow2Triangles), arrow2Triangles, GL_STATIC_DRAW);
 
 	glEnableVertexAttribArray(shader->getPositionLoc());
-	glVertexAttribPointer(shader->getPositionLoc(), 3, GL_FLOAT, GL_FALSE, arrowNAttribsPerVertex * sizeof(float), (void*)0);
+	glVertexAttribPointer(shader->getPositionLoc(), 3, GL_FLOAT, GL_FALSE, arrow2NAttribsPerVertex * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(shader->getNormalLoc());
-	glVertexAttribPointer(shader->getNormalLoc(), 3, GL_FLOAT, GL_FALSE, arrowNAttribsPerVertex * sizeof(float), (void*)(3 * sizeof(float)));
+	glVertexAttribPointer(shader->getNormalLoc(), 3, GL_FLOAT, GL_FALSE, arrow2NAttribsPerVertex * sizeof(float), (void*)(3 * sizeof(float)));
 
 	glBindVertexArray(0);
-	arrowTriangleCount = arrowNTriangles;
+	arrowTriangleCount = arrow2NTriangles;
 }
 
 ArrowMesh::~ArrowMesh() {

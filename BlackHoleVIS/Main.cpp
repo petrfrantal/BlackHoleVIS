@@ -2,6 +2,8 @@
 #undef main
 #include <glm\glm.hpp>
 #include <glm/gtx/vector_angle.hpp>
+#include <glm\gtc\quaternion.hpp>
+#include <glm\gtx\quaternion.hpp>
 #include <iostream>
 #include "Window.h"
 #include "Camera.h"
@@ -60,6 +62,22 @@ float computeHorizontalAngle(glm::vec3 v) {
 	vXZ = glm::normalize(vXZ);
 	glm::vec3 xAxis = glm::vec3(1.0f, 0.0f, 0.0f);
 	return angleBetweenVectorsHorizontal(vXZ, xAxis);
+}
+
+glm::mat4 computeRotation(float verticalAngleDeg, float horizontalAngleDeg) {
+	float verticalAngle = glm::radians(verticalAngleDeg);
+	float horizontalAngle = glm::radians(horizontalAngleDeg);
+	glm::mat3 rot1 = glm::mat3(cos(verticalAngle), sin(verticalAngle), 0.0f,
+		-sin(verticalAngle), cos(verticalAngle), 0.0f,
+		0.0f, 0.0f, 1.0f);
+	glm::mat3 rot2 = glm::mat3(cos(-horizontalAngle), 0.0f, -sin(-horizontalAngle),
+		0.0f, 1.0f, 0.0f,
+		sin(-horizontalAngle), 0.0f, cos(-horizontalAngle));
+	glm::mat3 rot = rot2 * rot1;
+	return glm::mat4(rot[0][0], rot[0][1], rot[0][2], 0.0f,
+		rot[1][0], rot[1][1], rot[1][2], 0.0f,
+		rot[2][0], rot[2][1], rot[2][2], 0.0f,
+		0.0f, 0.0f, 0.0f, 1.0f);
 }
 
 int main(int argc, char * argv[]) {
@@ -154,24 +172,25 @@ int main(int argc, char * argv[]) {
 		}
 		window.clear(0.0f, 0.0f, 0.0f, 1.0f);
 		// here will be the draws (we have to compute the transform matrices and so on - from the vector data)
-		glm::mat4 rotation = glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(1.0f, 1.0f, 0.0f));
-		glm::mat4 translate = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -450.0));
-		glm::mat4 scale = glm::scale(glm::mat4(1.0f), glm::vec3(50.0f, 50.0f, 50.0f));
-		glm::mat4 modelMatrix = translate * scale * rotation;
+		glm::mat4 translate;
+		glm::mat4 scale;
+		glm::mat4 modelMatrix;
 		glm::vec3 materialDiffuse = glm::vec3(1.0f, 1.0f, 1.0f);
 		float vectorLength = 1.0f;
 		glm::vec3 redMat = glm::vec3(1.0f, 0.2f, 0.2f); 
 		glm::vec3 blueMat = glm::vec3(0.7f, 0.7f, 0.7f);
 		materialDiffuse = vectorLength * redMat + (1 - vectorLength) * blueMat;
-		//arrowMesh.draw(&arrowShader, camera, modelMatrix, materialDiffuse);
 
-		// zaklad pro kostku dat
-		modelMatrix = glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-		//glm::mat4 rotationAroundY = glm::rotate(glm::mat4(1.0f), glm::radians(45.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-		modelMatrix = glm::rotate(modelMatrix, glm::radians(0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-		modelMatrix = glm::rotate(modelMatrix, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-		//rotation = glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-		//modelMatrix = rotationAroundY * modelMatrix;
+		float defaultAngle = glm::radians(-90.0f);
+		glm::mat4 defaultRotation = glm::mat4(cos(defaultAngle), sin(defaultAngle), 0.0f, 0.0f,
+								-sin(defaultAngle), cos(defaultAngle), 0.0f, 0.0f,
+								0.0f, 0.0f, 1.0f, 0.0f,
+								0.0f, 0.0f, 0.0f, 1.0f);
+		glm::vec3 v25 = glm::vec3(1.0f, 1.0f, 1.0f);
+		float verticalAngle = glm::degrees(computeVerticalAngle(v25));
+		float horizontalAngle = glm::degrees(computeHorizontalAngle(v25));
+		glm::mat4 fullRotation = computeRotation(verticalAngle, horizontalAngle);
+		modelMatrix = fullRotation * defaultRotation;
 
 		int dimension = 512;
 		int samplingX = 10;
@@ -185,149 +204,12 @@ int main(int argc, char * argv[]) {
 				for (int k = 0; k < samplingZ; k++) {
 					float translationZ = k * 512 / (float)samplingZ;
 					translate = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0, translationZ + 50.0f));
-					scale = glm::scale(glm::mat4(1.0f), glm::vec3(3.0f, 3.0f, 3.0f));
+					scale = glm::scale(glm::mat4(1.0f), glm::vec3(0.75f));
 					usedModelMatrix = translate * modelMatrix * scale;
 					//arrowMesh.draw(&arrowShader, camera, usedModelMatrix, materialDiffuse);
 				}
 			}
 		}
-
-		//glm::vec3 v = glm::vec3(1.0f, 1.0f, 1.0f);
-		//// vertical angle
-		//glm::vec3 vXY = glm::vec3(v.x, v.y, 0.0f);
-		//float angle = glm::degrees(glm::angle(glm::normalize(vXY), glm::vec3(1.0f, 0.0f, 0.0f)));
-		//angle = glm::degrees(glm::angle(glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(1.0f, 0.0f, 0.0f)));
-		//angle = glm::degrees(glm::angle(glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(1.0f, 0.0f, 0.0f)));
-		//angle = glm::degrees(glm::angle(glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(1.0f, 0.0f, 0.0f)));
-		//angle = glm::degrees(glm::angle(glm::vec3(0.0f, -1.0f, 0.0f), glm::vec3(1.0f, 0.0f, 0.0f)));
-		//angle = glm::degrees(glm::angle(glm::normalize(glm::vec3(1.0f, -1.0f, 0.0f)), glm::vec3(1.0f, 0.0f, 0.0f)));
-		//
-		//glm::vec3 first = glm::normalize(glm::vec3(1.0f, 0.0f, 0.0f));
-		//glm::vec3 second = glm::normalize(glm::vec3(1.0f, 0.0f, 0.0f));
-		//float dot = glm::dot(first, second);
-		//float det = first.x * second.y - second.x * first.y;
-		//angle = glm::degrees(atan2(det, dot));
-
-		//angle = angleBetweenVectorsVertical(first, second);
-
-		//first = glm::normalize(glm::vec3(1.0f, 1.0f, 0.0f));
-		//second = glm::normalize(glm::vec3(1.0f, 0.0f, 0.0f));
-		//angle = angleBetweenVectorsVertical(first, second);
-
-		//first = glm::normalize(glm::vec3(0.0f, 1.0f, 0.0f));
-		//second = glm::normalize(glm::vec3(1.0f, 0.0f, 0.0f));
-		//angle = angleBetweenVectorsVertical(first, second);
-
-		//first = glm::normalize(glm::vec3(-1.0f, 1.0f, 0.0f));
-		//second = glm::normalize(glm::vec3(1.0f, 0.0f, 0.0f));
-		//angle = angleBetweenVectorsVertical(first, second);
-
-		//first = glm::normalize(glm::vec3(-1.0f, 0.0f, 0.0f));
-		//second = glm::normalize(glm::vec3(1.0f, 0.0f, 0.0f));
-		//angle = angleBetweenVectorsVertical(first, second);
-		//
-		//first = glm::normalize(glm::vec3(-1.0f, 0.0f, 0.0f));
-		//second = glm::normalize(glm::vec3(1.0f, 0.0f, 0.0f));
-		//dot = glm::dot(first, second);
-		//det = first.x * second.y - second.x * first.y;
-		//angle = glm::degrees(atan2(det, dot));
-
-		//angle = angleBetweenVectorsVertical(first, second);
-
-		//first = glm::normalize(glm::vec3(1.0f, -1.0f, 0.0f));
-		//second = glm::normalize(glm::vec3(1.0f, 0.0f, 0.0f));
-		//angle = angleBetweenVectorsVertical(first, second);
-
-		//first = glm::normalize(glm::vec3(0.0f, -1.0f, 0.0f));
-		//second = glm::normalize(glm::vec3(1.0f, 0.0f, 0.0f));
-		//angle = angleBetweenVectorsVertical(first, second);
-
-		//first = glm::normalize(glm::vec3(-1.0f, -1.0f, 0.0f));
-		//second = glm::normalize(glm::vec3(1.0f, 0.0f, 0.0f));
-		//angle = angleBetweenVectorsVertical(first, second);
-
-		//// horizontal angle
-		//first = glm::normalize(glm::vec3(1.0f, 0.0f, 0.0f));
-		//second = glm::normalize(glm::vec3(1.0f, 0.0f, 0.0f));
-		//angle = angleBetweenVectorsHorizontal(first, second);
-
-		//first = glm::normalize(glm::vec3(1.0f, 0.0f, 1.0f));
-		//second = glm::normalize(glm::vec3(1.0f, 0.0f, 0.0f));
-		//angle = angleBetweenVectorsHorizontal(first, second);
-
-		//first = glm::normalize(glm::vec3(0.0f, 0.0f, 1.0f));
-		//second = glm::normalize(glm::vec3(1.0f, 0.0f, 0.0f));
-		//angle = angleBetweenVectorsHorizontal(first, second);
-
-		//first = glm::normalize(glm::vec3(-1.0f, 0.0f, 1.0f));
-		//second = glm::normalize(glm::vec3(1.0f, 0.0f, 0.0f));
-		//angle = angleBetweenVectorsHorizontal(first, second);
-
-		//first = glm::normalize(glm::vec3(-1.0f, 0.0f, 0.0f));
-		//second = glm::normalize(glm::vec3(1.0f, 0.0f, 0.0f));
-		//angle = angleBetweenVectorsHorizontal(first, second);
-
-		//first = glm::normalize(glm::vec3(-1.0f, 0.0f, -1.0f));
-		//second = glm::normalize(glm::vec3(1.0f, 0.0f, 0.0f));
-		//angle = angleBetweenVectorsHorizontal(first, second);
-
-		//first = glm::normalize(glm::vec3(0.0f, 0.0f, -1.0f));
-		//second = glm::normalize(glm::vec3(1.0f, 0.0f, 0.0f));
-		//angle = angleBetweenVectorsHorizontal(first, second);
-
-		//first = glm::normalize(glm::vec3(1.0f, 0.0f, -1.0f));
-		//second = glm::normalize(glm::vec3(1.0f, 0.0f, 0.0f));
-		//angle = angleBetweenVectorsHorizontal(first, second);
-
-		//v = glm::vec3(-1.0f, 1.0f, 0.0f);
-		//float verticalAngle = glm::degrees(computeVerticalAngle(v));
-		//float horizontalAngle = glm::degrees(computeHorizontalAngle(v));
-
-		//v = glm::vec3(-1.0f, 0.0f, 0.0f);
-		//verticalAngle = glm::degrees(computeVerticalAngle(v));
-		//horizontalAngle = glm::degrees(computeHorizontalAngle(v));
-
-		//v = glm::vec3(-1.0f, -1.0f, 0.0f);
-		//verticalAngle = glm::degrees(computeVerticalAngle(v));
-		//horizontalAngle = glm::degrees(computeHorizontalAngle(v));
-
-		//v = glm::vec3(0.0f, -1.0f, 1.0f);
-		//verticalAngle = glm::degrees(computeVerticalAngle(v));
-		//horizontalAngle = glm::degrees(computeHorizontalAngle(v));
-
-		//v = glm::vec3(-1.0f, -1.0f, -1.0f);
-		//verticalAngle = glm::degrees(computeVerticalAngle(v));
-		//horizontalAngle = glm::degrees(computeHorizontalAngle(v));
-		//glm::vec3 vN = glm::normalize(v);
-
-		//v = glm::vec3(1.0f, 0.0f, 0.0f);		// starting position of a vector
-		//glm::mat4 verticalRotation = glm::rotate(glm::mat4(1.0f), glm::radians(verticalAngle), glm::vec3(0.0f, 0.0f, 1.0f));
-		//glm::mat4 horizontalRotation = glm::rotate(glm::mat4(1.0f), glm::radians(horizontalAngle), glm::vec3(0.0f, 1.0f, 0.0f));
-		//glm::vec4 vRotated = horizontalRotation * verticalRotation * glm::vec4(v, 1.0f);
-		//glm::vec3 vRN = glm::normalize(glm::vec3(vRotated.x, vRotated.y, vRotated.z));
-		//verticalAngle = glm::degrees(computeVerticalAngle(vRN));
-		//horizontalAngle = glm::degrees(computeHorizontalAngle(vRN));
-
-		//verticalAngle = 45.0f;
-		//horizontalAngle = 180.0f;
-		//verticalRotation = glm::rotate(glm::mat4(1.0f), glm::radians(verticalAngle), glm::vec3(0.0f, 0.0f, 1.0f));
-		//horizontalRotation = glm::rotate(glm::mat4(1.0f), glm::radians(-horizontalAngle), glm::vec3(0.0f, 1.0f, 0.0f));
-		//glm::vec4 vRotated1 = horizontalRotation * glm::vec4(v, 1.0f);
-		//float y = vRotated1.x * verticalRotation[1][0] + vRotated1.y * verticalRotation[1][1] + vRotated1.z * verticalRotation[1][2] + vRotated1.w * verticalRotation[1][3];
-		//vRotated = glm::transpose(verticalRotation) * vRotated1;
-		//vRN = glm::normalize(glm::vec3(vRotated.x, vRotated.y, vRotated.z));
-		//verticalAngle = glm::degrees(computeVerticalAngle(vRN));
-		//horizontalAngle = glm::degrees(computeHorizontalAngle(vRN));
-
-		//verticalAngle = 90.0f;
-		//horizontalAngle = 0.0f;
-		//horizontalRotation = glm::rotate(glm::mat4(1.0f), glm::radians(-horizontalAngle), glm::vec3(0.0f, 1.0f, 0.0f));
-		//rotation = glm::rotate(horizontalRotation, glm::radians(verticalAngle), glm::vec3(0.0f, 0.0f, 1.0f));
-		//vRotated = rotation * glm::vec4(v, 1.0f);
-		//vRN = glm::normalize(glm::vec3(vRotated.x, vRotated.y, vRotated.z));
-		//verticalAngle = glm::degrees(computeVerticalAngle(vRN));
-		//horizontalAngle = glm::degrees(computeHorizontalAngle(vRN));
-
 		vis.draw(camera);
 		window.swapBuffers();
 	}

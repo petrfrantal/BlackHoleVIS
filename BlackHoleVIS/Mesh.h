@@ -2,7 +2,7 @@
 
 #include <glew.h>
 #include "ArrowShader.h"
-#include "ArrowModel.h"
+#include "ArrowModel2.h"
 #include "Camera.h"
 #include <glm\glm.hpp>
 #include "glm/gtc/type_ptr.hpp"
