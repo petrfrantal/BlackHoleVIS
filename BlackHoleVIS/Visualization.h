@@ -1,6 +1,7 @@
 #pragma once
 
 #include <math.h>
+#include <iostream>
 #include "Mesh.h"
 #include "ArrowShader.h"
 #include "VisMath.h"
@@ -19,6 +20,7 @@ private:
 	ArrowShader * arrowShader;
 	LineMesh * lineMesh;
 	LineShader * lineShader;
+	LineMesh * borderMesh;
 	int type;						// Arrows, lines
 	bool cuttingPlane;				// Cutting plane used?
 	int planePosition = 5;				
@@ -34,6 +36,7 @@ private:
 	void drawArrows(Camera & camera);
 	void drawLines(Camera & camera);
 	void drawArrowsCuttingPlane(Camera & camera);
+	void drawBorders(Camera & camera);
 public:
 	Visualization(ArrowShader * arrowShader, LineShader * lShader);
 	~Visualization(void);
@@ -44,4 +47,5 @@ public:
 	void endCuttingPlane();
 	void changeModel(void);
 	void loadLinesCutPlane(void);
+	void loadBorders(void);
 };
