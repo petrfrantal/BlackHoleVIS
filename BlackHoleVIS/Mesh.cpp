@@ -49,3 +49,51 @@ void ArrowMesh::draw(ArrowShader * shader, Camera & camera, glm::mat4 modelMatri
 	glBindVertexArray(0);
 	glUseProgram(0);
 }
+
+LineMesh::LineMesh(LineShader * shader) {
+	glGenVertexArrays(1, &vao);
+	glBindVertexArray(vao);
+	glGenBuffers(1, &positionsVBO);
+	glBindBuffer(GL_ARRAY_BUFFER, positionsVBO);
+	glGenBuffers(1, &colorsVBO);
+	glBindBuffer(GL_ARRAY_BUFFER, colorsVBO);
+	glBindVertexArray(0);
+}
+
+LineMesh::~LineMesh(void) {
+	glDeleteVertexArrays(1, &vao);
+	glDeleteBuffers(1, &positionsVBO); 
+	glDeleteBuffers(1, &colorsVBO);
+}
+
+void LineMesh::loadBuffer(float * vertices, float * colors, int vertexCount, LineShader * shader, DrawUsages usage) {
+	glBindVertexArray(vao);
+	glBindBuffer(GL_ARRAY_BUFFER, positionsVBO);
+	if (usage == staticDraw) {
+		glBufferData(GL_ARRAY_BUFFER, sizeof(float) * vertexCount * 3, vertices, GL_STATIC_DRAW);		// when the contents of the buffer don't change often (such as for grid)
+	} else if (usage == dynamicDraw) {
+		glBufferData(GL_ARRAY_BUFFER, sizeof(float) * vertexCount * 3, vertices, GL_DYNAMIC_DRAW);		// when the contents of the buffer may change often (particles)
+	}
+	glEnableVertexAttribArray(shader->getPositionLoc());
+	glVertexAttribPointer(shader->getPositionLoc(), 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+	glBindBuffer(GL_ARRAY_BUFFER, colorsVBO);
+	if (usage == staticDraw) {
+		glBufferData(GL_ARRAY_BUFFER, sizeof(float) * vertexCount * 3, colors, GL_STATIC_DRAW);
+	} else if (usage == dynamicDraw) {
+		glBufferData(GL_ARRAY_BUFFER, sizeof(float) * vertexCount * 3, colors, GL_DYNAMIC_DRAW);
+	}
+	glEnableVertexAttribArray(shader->getColorLoc());
+	glVertexAttribPointer(shader->getColorLoc(), 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+	glBindVertexArray(0);
+	verticesCount = vertexCount;
+}
+
+void LineMesh::draw(LineShader * lineShader, Camera & camera) {
+	glUseProgram(lineShader->getShaderProgram());
+	glBindVertexArray(vao);
+	glm::mat4 viewProjection = camera.getViewProjection();
+	glUniformMatrix4fv(lineShader->getVPLoc(), 1, GL_FALSE, &viewProjection[0][0]);
+	glDrawArrays(GL_LINES, 0, verticesCount);
+	glBindVertexArray(0);
+	glUseProgram(0);
+}

@@ -1,4 +1,4 @@
-#version 140
+#version 150
 
 smooth in vec3 position_v;
 smooth in vec3 normal_v;
@@ -19,9 +19,10 @@ vec4 pointLightDiffuseComponent(vec3 position_v, vec3 normal_v, vec3 pointLightP
 
 void main()
 {
+	mat4 normalMatrix2 = transpose(inverse(modelMatrix));
 	// we get the coordinates of position and normal in the world coordinates
-	vec3 normalWorldSpace = normalize((normalMatrix * vec4(normal_v, 1.0)).xyz);
-	vec3 positionWorldSpace = vec3(modelMatrix * vec4(position_v, 1.0));
+	vec3 normalWorldSpace = normalize((normalMatrix2 * vec4(normal_v, 0.0)).xyz);
+	vec3 positionWorldSpace = (modelMatrix * vec4(position_v, 1.0)).xyz;
 
 	vec4 outputColor = vec4(0.0f, 0.0f, 0.0f, 0.0f);
 

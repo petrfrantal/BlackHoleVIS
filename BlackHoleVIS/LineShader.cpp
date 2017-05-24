@@ -8,3 +8,11 @@ LineShader::LineShader(const std::string& fileName) : Shader(fileName) {
 LineShader::~LineShader() {
 
 }
+
+GLint LineShader::getColorLoc(void) {
+	return colorLocation;
+}
+
+GLint LineShader::getVPLoc(void) {
+	return VPLocation;
+}

@@ -1,9 +1,11 @@
 #include "Visualization.h"
 #include <iostream>
 
-Visualization::Visualization(ArrowShader * arrShader) {
+Visualization::Visualization(ArrowShader * arrShader, LineShader * lShader) {
 	arrowMesh = new ArrowMesh(arrShader);
 	arrowShader = arrShader;
+	lineMesh = new LineMesh(lShader);
+	lineShader = lShader;
 	type = 0;
 	cuttingPlane = false;
 	// the arrays will always be of the maximum size, but we will use just samplingParameter^3 of them (reallocating would be expensive)
@@ -84,6 +86,7 @@ void Visualization::loadArray(const std::string & fileName) {
 }
 
 void Visualization::setSamplingParameter(int samplingRate) {
+	endCuttingPlane();
 	samplingParameter = samplingRate;
 	interpolateData();
 }
@@ -184,15 +187,89 @@ void Visualization::interpolateData(void) {
 		}
 		translationZ += translationIncrement;
 	}
+	glm::vec4 firstPoint = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+	glm::vec4 secondPoint = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f);
+	glm::vec4 point;
+	int vertexCount = samplingParameter * samplingParameter * samplingParameter * 2;
+	float * positions = new float[vertexCount * 3];
+	float * colors = new float[vertexCount * 3];
+	int positionIndex = 0;
+	int colorIndex = 0;
+	glm::vec3 white = glm::vec3(1.0f);
+	glm::mat4 lineScale = glm::scale(glm::mat4(1.0f), glm::vec3(30.0f));
 	for (int i = 0; i < samplingParameter; i++) {
 		for (int j = 0; j < samplingParameter; j++) {
 			for (int k = 0; k < samplingParameter; k++) {
 				norm = norms[i][j][k] / maximalNorm;		// normalized norm - parameter for interpolation of the material
 				material = (1 - norm) * firstMaterial + norm * secondMaterial;
 				materials[i][j][k] = material;
+				point = modelMatrices[i][j][k] * lineScale * firstPoint;
+				positions[positionIndex++] = point.x;
+				positions[positionIndex++] = point.y;
+				positions[positionIndex++] = point.z;
+				colors[colorIndex++] = material.x;
+				colors[colorIndex++] = material.y;
+				colors[colorIndex++] = material.z;
+				point = modelMatrices[i][j][k] * lineScale * secondPoint;
+				positions[positionIndex++] = point.x;
+				positions[positionIndex++] = point.y;
+				positions[positionIndex++] = point.z;
+				colors[colorIndex++] = white.x;
+				colors[colorIndex++] = white.y;
+				colors[colorIndex++] = white.z;
 			}
 		}
 	}
+	lineMesh->loadBuffer(positions, colors, vertexCount, lineShader, dynamicDraw);
+	delete[] positions;
+	delete[] colors;
+}
+
+void Visualization::loadLinesCutPlane(void) {
+	glm::vec4 firstPoint = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+	glm::vec4 secondPoint = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f);
+	glm::vec4 point;
+	int vertexCount = samplingParameter * samplingParameter * 2;
+	float * positions = new float[vertexCount * 3];
+	float * colors = new float[vertexCount * 3];
+	int positionIndex = 0;
+	int colorIndex = 0;
+	glm::vec3 white = glm::vec3(1.0f);
+	glm::mat4 lineScale = glm::scale(glm::mat4(1.0f), glm::vec3(30.0f));
+	glm::mat4 modelMatrix;
+	glm::vec3 material;
+	for (int i = 0; i < samplingParameter; i++) {
+		for (int j = 0; j < samplingParameter; j++) {
+			if (plane == xPlane) {
+				modelMatrix = modelMatrices[i][j][planePosition];
+				material = materials[i][j][planePosition];
+			} else if (plane == yPlane) {
+				modelMatrix = modelMatrices[i][planePosition][j];
+				material = materials[i][planePosition][j];
+			} else {
+				modelMatrix = modelMatrices[planePosition][i][j];
+				material = materials[planePosition][i][j];
+			}
+			point = modelMatrix * lineScale * firstPoint;
+			positions[positionIndex++] = point.x;
+			positions[positionIndex++] = point.y;
+			positions[positionIndex++] = point.z;
+			colors[colorIndex++] = material.x;
+			colors[colorIndex++] = material.y;
+			colors[colorIndex++] = material.z;
+			point = modelMatrix * lineScale * secondPoint;
+			positions[positionIndex++] = point.x;
+			positions[positionIndex++] = point.y;
+			positions[positionIndex++] = point.z;
+			colors[colorIndex++] = white.x;
+			colors[colorIndex++] = white.y;
+			colors[colorIndex++] = white.z;
+		}
+	}
+
+	lineMesh->loadBuffer(positions, colors, vertexCount, lineShader, dynamicDraw);
+	delete[] positions;
+	delete[] colors;
 }
 
 void Visualization::draw(Camera & camera) {
@@ -203,11 +280,7 @@ void Visualization::draw(Camera & camera) {
 			drawArrows(camera);
 		}
 	} else if (type == 1) {
-		if (cuttingPlane) {
-			drawLinesCuttingPlane(camera);
-		} else {
-			drawLines(camera);
-		}
+		drawLines(camera);
 	}
 }
 
@@ -246,9 +319,24 @@ void Visualization::drawArrowsCuttingPlane(Camera & camera) {
 }
 
 void Visualization::drawLines(Camera & camera) {
-
+	lineMesh->draw(lineShader, camera);
 }
 
-void Visualization::drawLinesCuttingPlane(Camera & camera) {
+void Visualization::setCuttingPlane(Planes pl, double position) {
+	cuttingPlane = true;
+	plane = pl;
+	planePosition = position * samplingParameter;
+	loadLinesCutPlane();
+}
 
+void Visualization::endCuttingPlane() {
+	cuttingPlane = false;
+}
+
+void Visualization::changeModel(void) {
+	if (type == 0) {
+		type = 1;
+	} else {
+		type = 0;
+	}
 }
